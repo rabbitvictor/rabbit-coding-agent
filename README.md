@@ -45,7 +45,7 @@ export GOOGLE_API_KEY=your-api-key-here
 Run the application:
 
 ```bash
-java -jar build/libs/rabbit-coding-agent.jar
+java -jar build/libs/rabbit-coding-agent-0.0.1-SNAPSHOT.jar
 ```
 
 ## License
