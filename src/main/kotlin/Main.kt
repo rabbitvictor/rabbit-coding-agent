@@ -14,6 +14,7 @@ import java.io.File
 
 
 fun main() {
+    // Initialize Gemini client and configure tools
     val client = Client()
     val toolConfig = buildTools()
     val generateContentConfig = GenerateContentConfig
@@ -21,35 +22,42 @@ fun main() {
         .automaticFunctionCalling(AutomaticFunctionCallingConfig.builder().disable(true))
         .tools(toolConfig).build()
 
+    // Create a chat session with Rabbit model
     val chatSession = client.chats.create("gemini-3-flash-preview", generateContentConfig)
     var toolCallResult = ""
     var readUserInput = true
 
+    // Maintain conversation history for multi-turn interaction
     val conversation = mutableListOf<Content>()
 
     while (true) {
+        // Read user input if needed and add to conversation history
         if (readUserInput) {
             print("\u001b[94mYou\u001b[0m: ")
             val userInput = readlnOrNull() ?: ""
-            println(conversation.addMessage(userInput))
+            conversation.addMessage(userInput)
         }
 
+        // Send conversation to LLM call and check if response contains tool calls
         val response = chatSession.sendMessage(conversation)
         val hasToolCall = response.functionCalls()?.isNotEmpty() ?: false
 
         when (hasToolCall) {
+            // If LLM call wants to call a tool: execute it and add result back to conversation
             true -> {
                 toolCallResult = toolCall(response)
                 conversation.addMessage(toolCallResult)
             }
 
+            // If LLM call has final response: print it and wait for next user input
             false -> {
-                print("\u001b[93mRabbit\u001b[0m: ${response.text()}")
+                println("\u001b[91mRabbit\u001b[0m: ${response.text()}")
                 readUserInput = true
                 continue
             }
         }
 
+        // Loop again without reading user input to process tool result
         readUserInput = false
     }
 }
@@ -64,7 +72,7 @@ fun listFiles(path: String): List<String> {
             }
         } ?: emptyList()
     return paths.also {
-        println("tool: listFiles($path)")
+        println("\u001b[92mTool\u001b[0m: listFiles($path)")
     }
 }
 
@@ -72,7 +80,7 @@ fun readFile(path: String): String {
     val file = File(path)
     if (!file.isFile) return "path $path is not a file"
     return file.readText().also {
-        println("tool: readFile($path)")
+        println("\u001b[92mTool\u001b[0m: readFile($path)")
     }
 }
 
@@ -84,12 +92,12 @@ fun editFile(path: String, oldText: String, newText: String): String {
         file.parentFile?.mkdirs()
         file.writeText(newText)
         return "File $path created successfully".also {
-            println("tool: editFile($path)")
+            println("\u001b[92mTool\u001b[0m: editFile($path)")
         }
     }
 
     if (!file.isFile) return "path $path is not a file".also {
-        println("tool: editFile($path)")
+       println("\u001b[92mTool\u001b[0m: editFile($path)")
     }
 
     val content = file.readText()
@@ -97,7 +105,7 @@ fun editFile(path: String, oldText: String, newText: String): String {
     val updatedContent = content.replace(oldText, newText)
     file.writeText(updatedContent)
     return "File $path edited successfully".also {
-        println("tool: editFile($path)")
+        println("\u001b[92mTool\u001b[0m: editFile($path)")
     }
 }
 
