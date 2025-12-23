@@ -14,58 +14,6 @@ import java.io.File
 
 
 fun main() {
-    callGemini()
-}
-
-fun listFiles(path: String): List<String> {
-    val paths = File(path).listFiles()
-        ?.mapNotNull {
-            if (it.isDirectory) {
-                "/${it.name}"
-            } else {
-                it.name
-            }
-        } ?: emptyList()
-    return paths.also {
-        println("tool{ listFiles($path) }")
-    }
-}
-
-fun readFile(path: String): String {
-    val file = File(path)
-    if (!file.isFile) return "path $path is not a file"
-    return file.readText().also {
-        println("tool{ readFile($path) }")
-    }
-}
-
-fun editFile(path: String, oldText: String, newText: String): String {
-    val file = File(path)
-
-    // If file doesn't exist, create it with newText
-    if (!file.exists()) {
-        file.parentFile?.mkdirs()
-        file.writeText(newText)
-        return "File $path created successfully".also {
-            println("tool{ editFile($path) }")
-        }
-    }
-
-    if (!file.isFile) return "path $path is not a file".also {
-        println("tool{ editFile($path) }")
-    }
-
-    val content = file.readText()
-    if (!content.contains(oldText)) return "oldText not found in file $path"
-    val updatedContent = content.replace(oldText, newText)
-    file.writeText(updatedContent)
-    return "File $path edited successfully".also {
-        println("tool{ editFile($path) }")
-    }
-}
-
-
-fun callGemini() {
     val client = Client()
     val toolConfig = buildTools()
     val generateContentConfig = GenerateContentConfig
@@ -81,7 +29,7 @@ fun callGemini() {
 
     while (true) {
         if (readUserInput) {
-            println("\u001b[94mYou\u001b[0m: ")
+            print("\u001b[94mYou\u001b[0m: ")
             val userInput = readlnOrNull() ?: ""
             println(conversation.addMessage(userInput))
         }
@@ -96,7 +44,7 @@ fun callGemini() {
             }
 
             false -> {
-                println("\u001b[93mClaude\u001b[0m: ${response.text()}")
+                print("\u001b[93mRabbit\u001b[0m: ${response.text()}")
                 readUserInput = true
                 continue
             }
@@ -106,13 +54,59 @@ fun callGemini() {
     }
 }
 
-private fun MutableList<Content>.addMessage(text: String): Boolean {
-    return add(
-        Content.builder()
-            .role("user")
-            .parts(Part.builder().text(text).build()).build()
-    )
+fun listFiles(path: String): List<String> {
+    val paths = File(path).listFiles()
+        ?.mapNotNull {
+            if (it.isDirectory) {
+                "/${it.name}"
+            } else {
+                it.name
+            }
+        } ?: emptyList()
+    return paths.also {
+        println("tool: listFiles($path)")
+    }
 }
+
+fun readFile(path: String): String {
+    val file = File(path)
+    if (!file.isFile) return "path $path is not a file"
+    return file.readText().also {
+        println("tool: readFile($path)")
+    }
+}
+
+fun editFile(path: String, oldText: String, newText: String): String {
+    val file = File(path)
+
+    // If file doesn't exist, create it with newText
+    if (!file.exists()) {
+        file.parentFile?.mkdirs()
+        file.writeText(newText)
+        return "File $path created successfully".also {
+            println("tool: editFile($path)")
+        }
+    }
+
+    if (!file.isFile) return "path $path is not a file".also {
+        println("tool: editFile($path)")
+    }
+
+    val content = file.readText()
+    if (!content.contains(oldText)) return "oldText not found in file $path"
+    val updatedContent = content.replace(oldText, newText)
+    file.writeText(updatedContent)
+    return "File $path edited successfully".also {
+        println("tool: editFile($path)")
+    }
+}
+
+private fun MutableList<Content>.addMessage(text: String): Boolean = add(
+    Content.builder()
+        .role("user")
+        .parts(Part.fromText(text))
+        .build()
+)
 
 private fun toolCall(response: GenerateContentResponse?): String {
     return response?.functionCalls()?.map { call ->
